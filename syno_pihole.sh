@@ -802,6 +802,36 @@ init_settings() {
     fi
 }
 
+
+#======================================================================================================================
+# Initializes the network settings.
+#======================================================================================================================
+# Globals:
+#   - param_interface
+#   - param_subnet
+#   - param_gateway
+#   - param_host_ip
+#   - param_vlan_name
+#   - param_ip_range
+
+# Outputs:
+#   Displays settings.
+#======================================================================================================================
+init_settings_network() {
+ print_status "Initializing network and Pi-hole settings"
+ init_auto_detected_values
+ init_generated_values
+ validate_settings
+
+ log "Interface:                 ${param_interface}"
+ log "Subnet:                    ${param_subnet}"
+ log "Gateway:                   ${param_gateway}"
+ log "VLAN:                      ${param_vlan_name}"
+ log "Docker network IP range:   ${param_ip_range}"
+  }
+
+
+
 #======================================================================================================================
 # Asks the user to confirm the operation, unless in force mode.
 #======================================================================================================================
@@ -1044,6 +1074,50 @@ execute_create_macvlan() {
 }
 
 #======================================================================================================================
+# Create a network outside of docker-compose.yml.(optional)
+# address.
+#======================================================================================================================
+# Globals:
+#   - param_vlan_name
+#   - param_gateway
+#   - param_subnet
+#   - param_ip_range
+#   - param_interface
+# Outputs:
+#   Exits with a non-zero exit code if the network could not be created or reached.
+#======================================================================================================================
+
+
+execute_create_network() {
+    print_status "Creating network"
+
+    # Check if the network already exists
+    status=$(docker inspect "${param_vlan_name}" 2>/dev/null | jq -r '.[0].Name')
+    if [ "${status}" == "${param_vlan_name}" ]; then
+        log "Network '${param_vlan_name}' already exists."
+        return 0
+    fi
+
+    # Create the network if it doesn't exist
+    log "Adding network '${param_vlan_name}'"
+    docker network create --driver=macvlan \
+        --gateway="${param_gateway}" \
+        --subnet="${param_subnet}" \
+        --ip-range="${param_ip_range}" \
+        -o parent="${param_interface}" \
+        "${param_vlan_name}" >/dev/null 2>&1
+
+    # Check if the network was created successfully
+    status=$(docker inspect "${param_vlan_name}" 2>/dev/null)
+    if [ -z "${status}" ]; then
+        terminate "Could not create network '${param_vlan_name}'"
+    fi
+
+    # Show information about the created network
+    docker inspect "${param_vlan_name}" | jq -r '.[0] | {Name: .Name, Driver: .Driver, Network: .IPAM.Config[0], Parent: .Options.parent }'
+
+
+#======================================================================================================================
 # Creates the Pi-hole Docker network and Docker container using a (generated) Docker compose file.
 #======================================================================================================================
 # Globals:
@@ -1229,7 +1303,7 @@ main() {
                 shift
                 param_host_ip="$1"
                 ;;
-            install | network | update | version )
+            install | network | update | version | create )
                 command="$1"
                 ;;
             * )
@@ -1281,6 +1355,15 @@ main() {
             detect_dsm_version
             detect_host_versions
             define_pihole_versions
+            ;;
+        create )
+            total_steps=3
+            init_env
+            detect_dsm_version
+            detect_host_versions
+            init_settings_network
+            confirm_operation
+            execute_create_network
             ;;
         * )
             usage
