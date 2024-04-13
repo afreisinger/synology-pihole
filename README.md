@@ -91,9 +91,13 @@ Run the following command to update an existing Pi-hole container if a newer ver
 sudo ./syno_pihole.sh update
 ```
 
+Run the following command to create a network outside of docker-compose.yml
+```console
+sudo ./syno_pihole.sh create
+```
 
 ### Commands
-*Synology-pihole* supports the following commands. 
+*Synology-pihole* supports the following commands.
 
 | Command        | Description |
 |----------------|-------------|
@@ -101,6 +105,7 @@ sudo ./syno_pihole.sh update
 | **`network`**  | Creates or recreates virtual network |
 | **`update`**   | Updates an existing Pi-hole Docker container |
 | **`version`**  | Shows host and Pi-hole versions |
+| **`create`**   | Create docker network outside of docker-compose.yml |
 
 In addition, the following options are available.
 
