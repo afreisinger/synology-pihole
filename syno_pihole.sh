@@ -1115,7 +1115,7 @@ execute_create_network() {
 
     # Show information about the created network
     docker inspect "${param_vlan_name}" | jq -r '.[0] | {Name: .Name, Driver: .Driver, Network: .IPAM.Config[0], Parent: .Options.parent }'
-
+}
 
 #======================================================================================================================
 # Creates the Pi-hole Docker network and Docker container using a (generated) Docker compose file.
